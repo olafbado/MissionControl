@@ -6,15 +6,35 @@ defmodule FuelCalculatorWeb.MissionComponentsTest do
   alias FuelCalculatorWeb.MissionComponents
 
   describe "fuel_summary/1" do
-    test "shows the total fuel" do
-      html = render_component(&MissionComponents.fuel_summary/1, fuel: Decimal.new(212_161))
+    test "shows the total fuel and the mission figures" do
+      html =
+        render_component(&MissionComponents.fuel_summary/1,
+          fuel: Decimal.new(51_898),
+          mass: Decimal.new(28_801),
+          step_count: 4,
+          route: [:earth, :moon, :earth]
+        )
 
-      assert html =~ "212161"
+      route =
+        html
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query("#route li")
+        |> Enum.map(&String.trim(LazyHTML.text(&1)))
+
+      assert html =~ "51898"
+      assert html =~ "80699 kg"
+      assert route == ["Earth", "Moon", "Earth"]
       refute html =~ "fuel-hint"
     end
 
     test "shows a hint while the fuel is unknown" do
-      html = render_component(&MissionComponents.fuel_summary/1, fuel: nil)
+      html =
+        render_component(&MissionComponents.fuel_summary/1,
+          fuel: nil,
+          mass: nil,
+          step_count: 0,
+          route: []
+        )
 
       assert html =~ "fuel-hint"
       refute html =~ "total-fuel"
