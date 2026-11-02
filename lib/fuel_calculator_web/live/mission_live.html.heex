@@ -1,0 +1,32 @@
+<Layouts.app flash={@flash}>
+  <.header>
+    Mission fuel calculator
+    <:subtitle>
+      Enter the spacecraft mass and build the flight path to see how much fuel the mission needs.
+    </:subtitle>
+  </.header>
+
+  <.form for={@form} id="mission-form" class="space-y-6">
+    <.input
+      field={@form[:mass]}
+      type="number"
+      label="Spacecraft mass (kg)"
+      min="0"
+      step="any"
+      inputmode="decimal"
+      placeholder="e.g. 28801"
+    />
+
+    <section class="space-y-3">
+      <h2 class="font-semibold">Flight path</h2>
+      <ol id="flight-path" class="space-y-2">
+        <.step_row :for={{step, index} <- Enum.with_index(@steps)} step={step} index={index} />
+      </ol>
+      <button type="button" id="add-step" class="btn btn-primary btn-soft btn-sm">
+        <.icon name="hero-plus" class="size-4" /> Add step
+      </button>
+    </section>
+  </.form>
+
+  <.fuel_summary fuel={@fuel} />
+</Layouts.app>
