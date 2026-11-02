@@ -79,6 +79,28 @@ defmodule FuelCalculator.FlightTest do
     end
   end
 
+  describe "change_mission/2 flight path" do
+    test "rejects two launches in a row" do
+      changeset = Flight.change_mission(%Mission{}, mission_params(launch: :earth, launch: :moon))
+      assert errors_on(changeset) == %{flight_path: ["Expected a landing after a launch."]}
+    end
+
+    test "rejects two landings in a row" do
+      changeset = Flight.change_mission(%Mission{}, mission_params(land: :moon, land: :earth))
+      assert errors_on(changeset) == %{flight_path: ["Expected a launch after a landing."]}
+    end
+
+    test "rejects a launch from another planet than the last landing" do
+      changeset = Flight.change_mission(%Mission{}, mission_params(land: :moon, launch: :mars))
+      assert errors_on(changeset) == %{flight_path: ["Launch from Moon, where you last landed."]}
+    end
+
+    test "allows starting with a landing and ending with a launch" do
+      changeset = Flight.change_mission(%Mission{}, mission_params(land: :moon, launch: :moon))
+      assert changeset.valid?
+    end
+  end
+
   describe "get_example_mission/1" do
     test "builds a valid example mission for every example mission" do
       Enum.each(Flight.list_example_missions(), fn {id, _name} ->
@@ -110,5 +132,16 @@ defmodule FuelCalculator.FlightTest do
       assert Decimal.equal?(Flight.gravity(:moon), "1.62")
       assert Decimal.equal?(Flight.gravity(:mars), "3.711")
     end
+  end
+
+  defp mission_params(path) do
+    steps =
+      path
+      |> Enum.with_index()
+      |> Map.new(fn {{action, planet}, index} ->
+        {to_string(index), %{"action" => to_string(action), "planet" => to_string(planet)}}
+      end)
+
+    %{"mass" => "100", "steps" => steps}
   end
 end
