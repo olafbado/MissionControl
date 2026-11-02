@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    env:
+      MIX_ENV: test
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "27"
+          elixir-version: "1.17"
+
+      - name: Cache dependencies and build
+        uses: actions/cache@v6
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-otp27-elixir1.17-${{ hashFiles('mix.lock') }}
+          restore-keys: ${{ runner.os }}-otp27-elixir1.17-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      # The same checks as `mix precommit`, in their non-modifying form.
+      - name: Check for unused dependencies
+        run: mix deps.unlock --check-unused
+
+      - name: Compile
+        run: mix compile --warnings-as-errors
+
+      - name: Check formatting
+        run: mix format --check-formatted
+
+      - name: Credo
+        run: mix credo --strict
+
+      - name: Test
+        run: mix test
