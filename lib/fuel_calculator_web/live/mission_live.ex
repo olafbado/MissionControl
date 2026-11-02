@@ -66,6 +66,7 @@ defmodule FuelCalculatorWeb.MissionLive do
     socket
     |> assign(:form, to_form(mission_changeset, opts))
     |> assign_summary(mission_changeset)
+    |> assign(:path_errors, path_errors(mission_changeset))
     |> assign(:step_count, length(steps))
     |> assign(:visited_planets, visited_planets(steps))
   end
@@ -79,6 +80,13 @@ defmodule FuelCalculatorWeb.MissionLive do
     else
       assign(socket, mass: nil, fuel: nil)
     end
+  end
+
+  # Broken flight path rules by the index of the offending step.
+  defp path_errors(mission_changeset) do
+    mission_changeset.errors
+    |> Keyword.get_values(:flight_path)
+    |> Map.new(fn {_message, opts} = error -> {opts[:step], error} end)
   end
 
   defp visited_planets(steps) do

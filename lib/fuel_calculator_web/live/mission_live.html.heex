@@ -56,9 +56,12 @@
         <div class="my-8 border-t border-base-300"></div>
 
         <.form_section number="02" title="Flight path">
+          <p class="mb-2 text-xs text-base-content/60">
+            Alternate actions • Launch from the last landing location • Start or end with either action
+          </p>
           <ol :if={@step_count > 0} id="flight-path" class="divide-y divide-base-300">
             <.inputs_for :let={step} field={@form[:steps]}>
-              <.step_row step={step} />
+              <.step_row step={step} path_error={@path_errors[step.index]} />
             </.inputs_for>
           </ol>
           <p
@@ -85,7 +88,13 @@
     </div>
 
     <aside class="lg:sticky lg:top-8 lg:self-start">
-      <.fuel_summary fuel={@fuel} mass={@mass} step_count={@step_count} route={@visited_planets} />
+      <.fuel_summary
+        fuel={@fuel}
+        mass={@mass}
+        step_count={@step_count}
+        path_errors={map_size(@path_errors)}
+        route={@visited_planets}
+      />
     </aside>
   </div>
 </Layouts.app>

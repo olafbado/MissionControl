@@ -80,6 +80,20 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
     assert has_element?(view, "#step-0 p", "can't be blank")
   end
 
+  test "shows a flight path error on its step and hides the fuel", %{view: view} do
+    view |> element("#example-mission-apollo_11") |> render_click()
+
+    # Launch from Mars right after landing on the Moon.
+    view
+    |> form("#mission-form", mission: %{steps: %{"2" => %{planet: "mars"}}})
+    |> render_change()
+
+    assert has_element?(view, "#step-2", "Launch from Moon, where you last landed.")
+    assert has_element?(view, "#mission_steps_2_planet.select-error")
+    assert has_element?(view, "#fuel-hint", "Resolve 1 flight path error to calculate.")
+    refute has_element?(view, "#total-fuel")
+  end
+
   test "shows the gravity of the chosen planet", %{view: view} do
     view
     |> form("#mission-form", mission: %{steps: %{"0" => %{planet: "moon"}}})

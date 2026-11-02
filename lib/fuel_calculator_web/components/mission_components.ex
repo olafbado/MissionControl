@@ -71,17 +71,19 @@ defmodule FuelCalculatorWeb.MissionComponents do
   `Ecto.Changeset.cast_embed/3`'s `:sort_param` and `:drop_param`.
   """
   attr :step, Phoenix.HTML.Form, required: true, doc: "the nested form of a single step"
+  attr :path_error, :any, default: nil, doc: "the broken flight path rule of this step, if any"
 
   def step_row(assigns) do
     assigns =
       assigns
       |> assign(:number, assigns.step.index + 1)
       |> assign(:gravity, step_gravity(assigns.step))
+      |> assign(:path_error, path_error(assigns.path_error))
 
     ~H"""
     <li
       id={"step-#{@step.index}"}
-      class="flex items-start gap-3 py-3"
+      class="py-3"
       phx-mounted={
         JS.transition(
           {"ease-out duration-300", "opacity-0 -translate-y-1", "opacity-100 translate-y-0"}
@@ -89,43 +91,50 @@ defmodule FuelCalculatorWeb.MissionComponents do
       }
     >
       <input type="hidden" name="mission[steps_sort][]" value={@step.index} />
-      <span
-        class="mt-1 flex h-10 w-6 shrink-0 items-center justify-center text-base-content/70 tabular-nums"
-        aria-hidden="true"
-      >
-        {@number}
-      </span>
-      <div class="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-[1fr_1fr_6.5rem] *:mb-0">
-        <.input
-          field={@step[:action]}
-          type="select"
-          prompt="Action"
-          options={action_options()}
-          aria-label={"Step #{@number} action"}
-        />
-        <.input
-          field={@step[:planet]}
-          type="select"
-          prompt="Planet"
-          options={planet_options()}
-          aria-label={"Step #{@number} planet"}
-        />
-        <div class="mt-1 hidden h-10 flex-col justify-center leading-tight sm:flex">
-          <span class="text-xs text-base-content/60">Gravity</span>
-          <span class="text-sm tabular-nums">{gravity_label(@gravity)}</span>
+      <div class="flex items-start gap-3">
+        <span
+          class="mt-1 flex h-10 w-6 shrink-0 items-center justify-center text-base-content/70 tabular-nums"
+          aria-hidden="true"
+        >
+          {@number}
+        </span>
+        <div class="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-[1fr_1fr_6.5rem] *:mb-0">
+          <.input
+            field={@step[:action]}
+            type="select"
+            prompt="Action"
+            options={action_options()}
+            class={select_class(@path_error, :action)}
+            aria-label={"Step #{@number} action"}
+          />
+          <.input
+            field={@step[:planet]}
+            type="select"
+            prompt="Planet"
+            options={planet_options()}
+            class={select_class(@path_error, :planet)}
+            aria-label={"Step #{@number} planet"}
+          />
+          <div class="mt-1 hidden h-10 flex-col justify-center leading-tight sm:flex">
+            <span class="text-xs text-base-content/60">Gravity</span>
+            <span class="text-sm tabular-nums">{gravity_label(@gravity)}</span>
+          </div>
         </div>
+        <button
+          type="button"
+          id={"remove-step-#{@step.index}"}
+          name="mission[steps_drop][]"
+          value={@step.index}
+          phx-click={JS.dispatch("change")}
+          class="btn btn-square btn-ghost mt-1 border-base-300 hover:border-error hover:text-error"
+          aria-label={"Remove step #{@number}"}
+        >
+          <.icon name="hero-x-mark" class="size-5" />
+        </button>
       </div>
-      <button
-        type="button"
-        id={"remove-step-#{@step.index}"}
-        name="mission[steps_drop][]"
-        value={@step.index}
-        phx-click={JS.dispatch("change")}
-        class="btn btn-square btn-ghost mt-1 border-base-300 hover:border-error hover:text-error"
-        aria-label={"Remove step #{@number}"}
-      >
-        <.icon name="hero-x-mark" class="size-5" />
-      </button>
+      <p :if={@path_error} class="mt-2 flex items-center gap-2 pl-9 text-sm text-error">
+        <.icon name="hero-exclamation-triangle" class="size-5" /> {@path_error.message}
+      </p>
     </li>
     """
   end
@@ -136,6 +145,7 @@ defmodule FuelCalculatorWeb.MissionComponents do
   attr :fuel, Decimal, default: nil, doc: "the total fuel in kg, nil while unknown"
   attr :mass, Decimal, default: nil, doc: "the equipment mass in kg, nil while invalid"
   attr :step_count, :integer, required: true
+  attr :path_errors, :integer, default: 0, doc: "the number of broken flight path rules"
   attr :route, :list, required: true, doc: "the planets visited, in order"
 
   def fuel_summary(assigns) do
@@ -159,9 +169,7 @@ defmodule FuelCalculatorWeb.MissionComponents do
           {@fuel}<span class="ml-2 text-3xl font-semibold text-base-content/50">kg</span>
         </p>
       <% else %>
-        <p id="fuel-hint" class="mt-2 text-base-content/60">
-          Enter the equipment mass and choose an action and planet for every step.
-        </p>
+        <p id="fuel-hint" class="mt-2 text-base-content/60">{fuel_hint(@path_errors)}</p>
       <% end %>
 
       <dl class="mt-6 divide-y divide-base-300 border-y border-base-300 text-sm">
@@ -245,8 +253,29 @@ defmodule FuelCalculatorWeb.MissionComponents do
     end
   end
 
+  # Shown on the row even before the user touches its selects, because the
+  # error can be caused by editing another step.
+  defp path_error(nil), do: nil
+
+  defp path_error({_message, opts} = error),
+    do: %{field: opts[:field], message: translate_error(error)}
+
+  defp select_class(%{field: field}, field), do: "w-full select select-error"
+  defp select_class(_path_error, _field), do: "w-full select"
+
   defp gravity_label(nil), do: "-"
   defp gravity_label(gravity), do: "#{gravity} m/s²"
+
+  defp fuel_hint(0),
+    do: "Enter the equipment mass and choose an action and planet for every step."
+
+  defp fuel_hint(path_errors) do
+    ngettext(
+      "Resolve 1 flight path error to calculate.",
+      "Resolve %{count} flight path errors to calculate.",
+      path_errors
+    )
+  end
 
   defp kg(nil), do: "-"
   defp kg(value), do: "#{value} kg"
