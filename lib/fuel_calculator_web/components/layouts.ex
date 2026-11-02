@@ -35,24 +35,51 @@ defmodule FuelCalculatorWeb.Layouts do
 
   def app(assigns) do
     ~H"""
-    <header class="navbar px-4 sm:px-6 lg:px-8">
-      <div class="flex-1">
-        <.link navigate={~p"/"} class="flex w-fit items-center gap-2 font-semibold">
-          <.icon name="hero-rocket-launch" class="size-6 text-primary" /> Fuel Calculator
+    <div class="flex min-h-screen flex-col px-4 sm:px-6 lg:px-8">
+      <header class="mx-auto flex w-full max-w-6xl items-center justify-between py-5">
+        <.link navigate={~p"/"} class="flex items-center gap-4">
+          <.logo class="size-8 text-primary" />
+          <span class="text-sm font-semibold tracking-[0.25em] uppercase">Mission Control</span>
+          <span class="hidden h-5 border-l border-base-300 sm:block" aria-hidden="true"></span>
+          <span class="hidden text-sm text-base-content/60 sm:block">Fuel calculator</span>
         </.link>
-      </div>
-      <div class="flex-none">
         <.theme_toggle />
-      </div>
-    </header>
+      </header>
 
-    <main class="px-4 py-20 sm:px-6 lg:px-8">
-      <div class="mx-auto max-w-2xl space-y-4">
+      <main class="mx-auto w-full max-w-6xl flex-1 py-8">
         {render_slot(@inner_block)}
-      </div>
-    </main>
+      </main>
+
+      <footer class="mx-auto flex w-full max-w-6xl justify-between border-t border-base-300 py-5 text-xs text-base-content/60">
+        <span>Calculated as you type</span>
+        <span>Elixir + Phoenix LiveView</span>
+      </footer>
+    </div>
 
     <.flash_group flash={@flash} />
+    """
+  end
+
+  @doc """
+  Renders the app logo: a planet with an orbiting moon.
+  """
+  attr :class, :any, default: nil
+
+  def logo(assigns) do
+    ~H"""
+    <svg viewBox="0 0 32 32" fill="none" class={@class} aria-hidden="true">
+      <circle cx="16" cy="16" r="7" stroke="currentColor" stroke-width="2.5" />
+      <ellipse
+        cx="16"
+        cy="16"
+        rx="14"
+        ry="5.5"
+        transform="rotate(-25 16 16)"
+        stroke="currentColor"
+        stroke-width="2"
+      />
+      <circle cx="28" cy="8.5" r="2.5" fill="currentColor" />
+    </svg>
     """
   end
 

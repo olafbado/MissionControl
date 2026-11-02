@@ -1,32 +1,91 @@
 <Layouts.app flash={@flash}>
-  <.header>
-    Mission fuel calculator
-    <:subtitle>
-      Enter the spacecraft mass and build the flight path to see how much fuel the mission needs.
-    </:subtitle>
-  </.header>
+  <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_24rem] xl:grid-cols-[minmax(0,1fr)_28rem]">
+    <div class="space-y-8">
+      <header>
+        <h1 class="text-4xl font-extrabold tracking-tight sm:text-6xl">
+          Plan your next mission.
+        </h1>
+        <p class="mt-3 text-lg text-base-content/60 sm:text-2xl">
+          Build a flight path. Know your fuel requirements.
+        </p>
+      </header>
 
-  <.form for={@form} id="mission-form" class="space-y-6">
-    <.input
-      field={@form[:mass]}
-      type="number"
-      label="Spacecraft mass (kg)"
-      min="0"
-      step="any"
-      inputmode="decimal"
-      placeholder="e.g. 28801"
-    />
+      <.form
+        for={@form}
+        id="mission-form"
+        phx-change="validate"
+        phx-submit="validate"
+        class="rounded-box border border-base-300 bg-base-200 p-6 sm:p-8"
+      >
+        <.form_section number="01" title="Spacecraft">
+          <:actions>
+            <button
+              type="button"
+              id="reset-mission"
+              phx-click="reset"
+              class="btn btn-ghost btn-sm font-normal text-base-content/70"
+            >
+              <.icon name="hero-arrow-path" class="size-4" /> Reset
+            </button>
+          </:actions>
 
-    <section class="space-y-3">
-      <h2 class="font-semibold">Flight path</h2>
-      <ol id="flight-path" class="space-y-2">
-        <.step_row :for={{step, index} <- Enum.with_index(@steps)} step={step} index={index} />
-      </ol>
-      <button type="button" id="add-step" class="btn btn-primary btn-soft btn-sm">
-        <.icon name="hero-plus" class="size-4" /> Add step
-      </button>
-    </section>
-  </.form>
+          <.mass_input field={@form[:mass]} />
 
-  <.fuel_summary fuel={@fuel} />
+          <div class="mt-5 grid gap-3 sm:grid-cols-3">
+            <button
+              :for={{id, name} <- @example_missions}
+              type="button"
+              id={"example-mission-#{id}"}
+              phx-click="toggle_example_mission"
+              phx-value-id={id}
+              aria-pressed={to_string(@selected_example_mission == id)}
+              class={[
+                "btn font-normal",
+                if(@selected_example_mission == id,
+                  do: "border-primary bg-primary/10",
+                  else:
+                    "border-base-300 bg-transparent text-base-content/70 hover:border-base-content/40"
+                )
+              ]}
+            >
+              {name}
+            </button>
+          </div>
+        </.form_section>
+
+        <div class="my-8 border-t border-base-300"></div>
+
+        <.form_section number="02" title="Flight path">
+          <ol :if={@step_count > 0} id="flight-path" class="divide-y divide-base-300">
+            <.inputs_for :let={step} field={@form[:steps]}>
+              <.step_row step={step} />
+            </.inputs_for>
+          </ol>
+          <p
+            :if={@step_count == 0}
+            id="flight-path-empty"
+            class="py-6 text-center text-sm text-base-content/60"
+          >
+            No steps yet. Add a launch or a landing to start the flight path.
+          </p>
+
+          <input type="hidden" name="mission[steps_drop][]" />
+          <button
+            type="button"
+            id="add-step"
+            name="mission[steps_sort][]"
+            value="new"
+            phx-click={JS.dispatch("change")}
+            class="btn btn-dash mt-4 w-full font-normal"
+          >
+            <.icon name="hero-plus" class="size-5" /> Add step
+          </button>
+        </.form_section>
+      </.form>
+    </div>
+
+    <aside class="lg:sticky lg:top-8 lg:self-start">
+      <.fuel_summary fuel={@fuel} mass={@mass} step_count={@step_count} route={@visited_planets} />
+    </aside>
+  </div>
 </Layouts.app>
